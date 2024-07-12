@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search Album - Play Music & Browse Music Info</title>
+    <style>
+        [class*="class"] {
+            float: left;
+            width: 31.5%;
+            margin: 0.5%;
+            border: solid 2px white;
+            height: 800px;
+        }
+        
+        @media only screen and (max-width: 900px) {
+            /* For mobile phones: */
+            .class1, .class2, .class3 {
+                width: 97%;
+                float: none;
+                margin: 4% auto;
+                border: none;
+                height: 100%;
+            }
+            .class2, .class3 {
+              border: solid 2px white;
+            }
+        }
+
+         * {
+                background-color: #000000;
+                margin: 0px;
+            }
+
+            ::selection {
+                color: green;
+                background: rgb(245, 245, 190);
+              }
+    
+            ::marker { 
+                color: yellow;
+                font-size: 23px;    
+            }
+
+            form > input[type="button"] {
+                font-size: 15px;
+                border-radius: 8px;
+                cursor: pointer;
+                margin: 2px;
+                font-size: 16px;
+                padding-left: 3px;
+                padding-right: 10px;
+                text-align: center;
+            }
+
+            header,
+            nav,
+            footer {
+                padding: 15px;
+                background-color: rgb(0, 0, 0);
+                text-align: center;
+                color: white;
+                border-bottom: solid 1px rgba(160, 160, 160, 0.26);
+                border-top: solid 1px rgba(160, 160, 160, 0.26);
+    
+            }
+            header {
+                border-bottom: none;
+            }
+    
+            footer {
+                clear: both;
+            }
+
+            nav a:hover:not(.active) {
+                background-color: dodgerblue;
+                color: white;
+            }
+
+            nav a {
+                text-decoration: none;
+                float: left;
+
+                /*border-left: solid 1px rgba(160, 160, 160, 0.26);
+                border-top: solid 1px rgba(160, 160, 160, 0.26);*/
+                display: block;
+                color: white;
+                text-align: center;
+                padding: 10px 20px;
+                text-decoration: none;
+            }
+
+            #s2 span {
+                background-color:white; color: red; font-size:large;
+            }
+
+            header > form {
+                font-size:15px;
+                display:flex;
+            }
+    
+            .active:hover {
+                background-color:darkorange;
+                color: white;
+            }
+    
+            section {
+                margin: 0.5%;/*15px;*/
+                border: solid 2px white;
+                width: 31.5%;
+                height: 800px;
+                float: left;
+                color: white;
+            }
+    
+            ul {
+                list-style-type: circle;
+            }
+    
+            ol {
+                list-style-type: upper-roman;
+            }
+    
+            .c1 {
+                background-color: white;
+                color: black;
+                padding: 5px;
+            }
+    
+            nav {
+                list-style-type: none;
+                margin-bottom: 10px;
+                padding: 0;
+                overflow: hidden;
+                /* 없으면, 내부의 컨텐츠가 없어서 길이가 0이 되므로 표시안됨.
+                          표시하려면, float엘리먼트의 영역을 제대로 계산해주면 좋겠다 싶을때 overflow:hidden 적용해줌 */
+                background-color: #000000;
+            }
+    
+            .active {
+                background-color: white;
+                color: black;
+            }
+    
+            input {
+                background-color: white;
+                font: white;
+                font-size: 15px;
+            }
+
+            #wikiDiv, #youtube_playlist, #album_info {
+                overflow-y: auto; /* Enable vertical scroll if lyrics overflow */
+                height: 90.3%; /* Set height to fill parent section */
+                padding: 13px;
+            }
+
+            #youtube_playlist {
+                font-size: 14px;
+                height: 76.5%; /* Set height to fill parent section */
+            }
+            
+            table, td, th {
+                margin: 0px auto;
+                border : 1px solid white ;
+                border-collapse : collapse;
+                font-size: 15px;
+            }
+
+            td, th {
+                padding-left: 0.5em;
+                padding-right: 0.5em;
+            }
+
+            sub {
+                font-size: smaller;
+            }
+
+            #wikiText {
+                padding:10px;
+                font-family: sans-serif; /* Use monospaced font for consistent lyrics formatting */
+                white-space: pre-wrap; /* Wrap long lines within the pre element */
+            }
+
+            /* width */
+            ::-webkit-scrollbar {
+                width: 10px;
+            }
+            
+            /* Track */
+            ::-webkit-scrollbar-track {
+                box-shadow: inset 0 0 5px grey; 
+                border-radius: 10px;
+                background: black;
+                border : solid white 1px;
+            }
+            
+            /* Handle */
+            ::-webkit-scrollbar-thumb {
+                background: gray; 
+                border-radius: 10px;
+            }
+            
+            /* Handle on hover */
+            ::-webkit-scrollbar-thumb:hover {
+                background: #b30000; 
+            }
+
+    </style>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <script>
+        function searchAlbumVid() {
+            const artist = document.getElementById('artist2').value;
+            const album_title = document.getElementById('album_title').value;
+    
+            const query = artist + ' "' + album_title + '" album';
+    
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `/searchPlaylists?query=${encodeURIComponent(query)}`, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    const data = JSON.parse(xhr.responseText);
+    
+                    if (data.items && data.items.length > 0) {
+                        const foundPlaylists = data.items;
+    
+                        let filteredPlaylists = [];
+                        let filteredPlaylistsInfos = [];
+                        let pendingRequests = foundPlaylists.length;
+    
+                        foundPlaylists.forEach(playlist => {
+                            const playlistId = playlist.id.playlistId;
+                            // for debugging
+                            //document.getElementById('log').innerHTML += '<br>' + playlistId;
+    
+                            var xhr2 = new XMLHttpRequest();
+                            xhr2.open('GET', `/getPlaylistItems?playlistId=${playlistId}`, true);
+                            xhr2.onreadystatechange = function () {
+                                if (xhr2.readyState === 4 && xhr2.status === 200) {
+                                    const data2 = JSON.parse(xhr2.responseText);
+    
+                                    const videos = data2.items;
+                                    var flag = true;
+                                    // for debugging
+                                    // document.getElementById('log').innerHTML += '<br><br>' + playlistId;
+    
+                                    videos.forEach(video => {
+                                        // for debugging
+                                        // document.getElementById('log').innerHTML += '<br>' + video.snippet.title.toLowerCase();
+                                        // document.getElementById('log').innerHTML += '  <===>  ' + artist.toLowerCase();
+    
+                                        if (video.snippet.title.toLowerCase().includes(artist.toLowerCase())) {
+                                            flag = false;
+                                        }
+                                    });
+                                    // for debugging
+                                    // document.getElementById('log').innerHTML += '  ==>  ' + flag;
+                                    if (flag) {
+                                        filteredPlaylists.push(playlistId);
+                                        filteredPlaylistsInfos.push(videos);
+                                    }
+                                }
+                                else {
+                                    console.error('Second request failed:', xhr2.statusText);
+                                }
+                                pendingRequests--;
+                                if (pendingRequests === 0) {
+    
+                                    if (filteredPlaylists.length > 0) {
+                                        const chosenPlaylistId = filteredPlaylists[0];
+                                        const chosenPlaylistInfo = filteredPlaylistsInfos[0];
+                                        // for debugging                                    
+                                        // document.getElementById('log').innerHTML += '<br>' + chosenPlaylistId;
+    
+                                        document.getElementById('videoPlayer2').innerHTML = `
+                                            <iframe height=100% width=100% src="https://www.youtube.com/embed/videoseries?list=${chosenPlaylistId}" frameborder="0" allowfullscreen></iframe>`;
+                                        
+                                        var i = 1;
+                                        chosenPlaylistInfo.forEach(video => {
+                                            document.getElementById('youtube_playlist').innerHTML += '['+ i +'] ' + video.snippet.title + '<br>';
+                                            i++;
+                                        });
+                                                                           
+                                    } else {
+                                        document.getElementById('videoPlayer2').innerHTML = 'No video found.';
+                                    }
+    
+                                } 
+                            };
+                            xhr2.send(); // Send the second request
+                        });
+                    } 
+                    else {
+                        document.getElementById('videoPlayer2').innerHTML = 'No playlists found.';
+                    }
+                }
+            };
+            xhr.send();
+        }
+    
+    
+    ///////////////////below are MusicBrainz API requests////////////////////////
+    
+    
+        function searchArtist() {
+            var artist_name = document.getElementById('artist2').value;
+    
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `/searchArtist?artistName=${encodeURI(artist_name)}`, true);
+    
+            xhr.onreadystatechange = function() {
+                if(xhr.readyState === 4) {
+                    
+                    var data = JSON.parse(xhr.responseText);
+                    
+                    var artistNames = [];
+                    var loopcount = (data.artists.length > 10) ? 10 : data.artists.length;
+    
+                    artistNames.push(artist_name);                    
+    
+                    for (var i=0; i < loopcount; i++){
+                        artistNames.push(data.artists[i].name);                    
+                    }
+    
+                                            
+                    searchAlbum(artistNames);                    
+                }
+            }
+            xhr.send();
+        }
+        
+        function searchAlbum(artistNames) {
+            const album_title = document.getElementById('album_title').value;
+    
+            var artistNameSequence = '';
+            artistNames.forEach(artistName => {
+                artistNameSequence += `${artistName},`;
+            });
+    
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `/searchAlbum?albumTitle=${encodeURI(album_title)}&artistNameSequence=${encodeURIComponent(artistNameSequence)}`, true);
+    
+            xhr.onreadystatechange = function() {
+                if(xhr.readyState === 4) {
+                    
+                    var data = JSON.parse(xhr.responseText);
+    
+                    var filteredRleaseGroups = data['release-groups'].filter(release_group => release_group.title.toLowerCase().includes(album_title.toLowerCase()) && release_group['primary-type'] === "Album");
+                    //var temp = temp.filter(release_group => release_group.title.toLowerCase.includes(album_title.toLowerCase()));
+    
+                    
+                    var releaseGroupMbid = filteredRleaseGroups[0].id;
+                    document.getElementById('albumInfoHeader').innerHTML += ` <a style="background-color:white; font-size:small;" href="https://musicbrainz.org/release-group/${releaseGroupMbid}" target="_blank">src:MusicBrainz</a>`;
+                    var firstReleaseDate = filteredRleaseGroups[0]['first-release-date'];
+    
+                    
+                    getPrimaryRelease(releaseGroupMbid, firstReleaseDate);                    
+                }
+            }
+            xhr.send();
+        }
+    
+        function getPrimaryRelease(releaseGroupMbid, firstReleaseDate) {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `/getPrimaryRelease?releaseGroupMbid=${releaseGroupMbid}`, true);
+    
+    
+            xhr.onreadystatechange = function() {
+                if(xhr.readyState === 4) {
+                    
+                    
+                    var data = JSON.parse(xhr.responseText);
+                    
+                    var genres = data.genres;
+                    
+                    var temp = data.relations.filter(relation => relation.type === 'wikidata');
+                    
+                    var wikidataURL = temp[0].url.resource;
+                    var lastSlashIndex = wikidataURL.lastIndexOf('/');
+                    var wikidataID = wikidataURL.substring(lastSlashIndex + 1);
+    
+                    fetchWikipediaURL(wikidataID);
+    
+                    const officialPrimaryReleases = data.releases.filter(release => release.status === 'Official' && release.date === firstReleaseDate);
+                    //officialPrimaryReleases.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+                    const releaseMbid = officialPrimaryReleases[0].id;
+    
+                    fetchReleaseDetails(releaseMbid, genres);                                
+                }
+            }
+            xhr.send();
+    
+        }
+    
+        function fetchReleaseDetails(releaseMbid, genres) {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `/fetchReleaseDetails?releaseMbid=${releaseMbid}`, true);
+    
+            xhr.onreadystatechange = function() {
+                if(xhr.readyState === 4) {
+                    
+                    var data = JSON.parse(xhr.responseText);
+    
+                    var artist = data['artist-credit'][0].name;
+                    var album_title = data.title;
+                    var release_date = data.date;
+                    var country = data.country;
+                    var label = data['label-info'][0].label.name;
+                    var format = data.media[0].format;
+                    var language = data['text-representation'].language;
+                    var script = data['text-representation'].script;
+                    
+                    var track_count = 0;
+                    var total_duration = 0;
+                    var media = data.media;
+                
+                    var albuminfo = '<ul><li>Artist : ' + artist + '</li><li>Album Title : ' + album_title + '</li><li>Release Date : ' + release_date + '</li><li>Country : ' + country + '</li><li>Label : ' + label + '</li><li>Format : ' + format + '</li><li>Language : ' + language + '</li><li>Script : ' + script + '</li>';
+                    var trackinfo = `<br><table style="width : 95%">
+                        <tr>
+                            <th style="font-size:x-small;">Pos.</th>
+                            <th style="font-size:x-small;">Track#</th>
+                            <th>Track Title</th>
+                            <th>Length</th>
+                        </tr>`;
+                    media.forEach(disc => {
+                        trackinfo += '<tr><th colspan="4">DISC ' + disc.position + '</th></tr>';
+                        track_count += disc['track-count'];
+                        disc.tracks.forEach(track => {
+                            trackinfo += '<tr><td>' + track.position + '</td><td>' + track.number + '</td><td>' + track.title + '</td><td>' + milliSecToMinSec(track.length) + '</td></tr>';
+                            total_duration += track.length;
+                        });                    
+                    });
+                    trackinfo += '</table>';
+                    albuminfo += '<li>Track Count : ' + track_count + '</li>';
+    
+                    albuminfo += '<li>Total Duration : ' + milliSecToMinSec(total_duration) + '</li>';
+                    albuminfo += '<li>Genres : ';
+                    
+                    //var genres = genres;
+                    genres.sort((a, b) => b.count - a.count);
+    
+                    genres.forEach(genre => {
+                        albuminfo += genre.name  + '<sub>(' + genre.count + ')</sub>, ';
+                    });
+                    albuminfo += '</li></ul>';
+    
+                    document.getElementById('album_info').innerHTML = albuminfo + trackinfo;
+    
+                }
+            }
+            xhr.send();
+        }
+    
+    
+    ///////////////////above are MusicBrainz API requests////////////////////////
+    
+    
+        function fetchWikipediaURL(wikidataID) {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `/fetchWikipediaURL?wikidataID=${wikidataID}`, true);
+    
+            xhr.onreadystatechange = function() {
+                if(xhr.readyState === 4) {
+                    var data = JSON.parse(xhr.responseText);
+                    var wikipediaURL = data.entities[wikidataID].sitelinks.enwiki.url;
+    
+                    document.getElementById('wikiHeader').innerHTML += ` <a style="background-color:white; text-align:right; font-size:small;" href="${wikipediaURL}" target="_blank">src:Wikipedia</a>`;
+    
+                    const urlParts = wikipediaURL.split('/');
+                    var fourthSlashPosition  = wikipediaURL.indexOf('/', urlParts[0].length + urlParts[1].length + urlParts[2].length + urlParts[3].length + 1); // Start search after the second slash + its length
+    
+                    var article_title = wikipediaURL.substring(fourthSlashPosition + 1);
+                    // console.log(article_title);
+    
+                    fetchWikipediaArticleIntro(article_title);
+    
+                }
+            }
+            xhr.send();
+        }
+    
+        
+        function fetchWikipediaArticleIntro(article_title) {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `/fetchWikipediaArticleIntro?articleTitle=${article_title}`, true);
+    
+            xhr.onreadystatechange = function() {
+                if(xhr.readyState === 4) {
+                    var data = JSON.parse(xhr.responseText);
+                    
+                    const pages = data.query.pages;
+                    const firstPageId = Object.keys(pages)[0]; // Assuming the first page is relevant
+                    const intro = pages[firstPageId].extract;
+    
+                    document.getElementById('wikiDiv').innerHTML = '<pre id="wikiText">' + intro + '</pre>';
+                    //console.log(intro); // This might be an excerpt or summary of the introduction             
+    
+                }
+            }
+            xhr.send();
+    
+    
+        }
+
+    
+        function milliSecToMinSec(milliSecs) {
+            const date = new Date(Date.UTC(0,0,0,0,0,0,milliSecs));
+            var paddedHour = date.getUTCHours().toString().padStart(2,'0');
+            var paddedMin = date.getUTCMinutes().toString().padStart(2,'0');
+            var paddedSec = date.getUTCSeconds().toString().padStart(2,'0');
+    
+            return (paddedHour === '00') ? `${paddedMin}:${paddedSec}` : `${paddedHour}:${paddedMin}:${paddedSec}`;
+        }
+    
+    
+        function makeClean() {
+            document.getElementById('videoPlayer2').innerHTML = '<img src="./img/no_signal.gif" alt="nosignal" style="max-height:100%; max-width:100%;">';
+            document.getElementById('album_info').innerHTML = '';
+            document.getElementById('wikiDiv').innerHTML = '';
+            document.getElementById('youtube_playlist').innerHTML = '';
+            document.getElementById('wikiHeader').innerHTML = '&nbsp;WIKIPEDIA'; 
+            document.getElementById('albumInfoHeader').innerHTML = '&nbsp;ALBUM INFO. <span style="background-color:white; color: red; font-size:large;">(of primary release)</span>';
+        }
+    
+    
+        function checkQuerythenSearch() {
+            if(!document.getElementById('artist2').value) {
+                window.alert('Enter Artist name.');
+                return;
+            }
+            if(!document.getElementById('album_title').value) {
+                window.alert('Enter Album title.');
+                return;
+            }
+    
+            makeClean();
+            searchAlbumVid();
+            searchArtist();
+        }
+    
+    
+        function changeTextSize(ratio) {
+            var elements = document.querySelectorAll("#youtube_playlist, #album_info *, #wikiDiv *, table");
+            elements.forEach(elem => {
+              var style = window.getComputedStyle(elem, null).getPropertyValue('font-size');
+              var currentSize = parseFloat(style);
+              elem.style.fontSize = (currentSize * ratio) + 'px';
+            });
+          }
+            
+        window.onload = function () {
+            let slider = document.querySelector('#sectionHeightSlider');
+    
+            slider.addEventListener('input', e => {
+                document.querySelectorAll('body > section').forEach(section => {
+                    section.style.height = e.target.value + 'px';
+                });
+            })
+        };
+    
+    </script>
+    
+</head>
+
+<body>
+    <header>
+
+         <form style="float:right;">
+            <label for="sectionHeightSlider">Change Length of View&nbsp;</label>
+            <input id="sectionHeightSlider" type='range' min="400" max="2000" value="800">
+        </form>
+
+        <form>
+            <input type="button" value="+" onclick="changeTextSize(1.05);">
+            <input type="button" value="-" onclick="changeTextSize(0.95);">
+            <p>&nbsp;Text Size</p>
+
+        </form>
+        <h1>Play Music & Browse Music Info</h1>
+        <p style="text-align:right; font-size:12px;">201924578 정하립</p>
+
+    </header>
+    <nav>
+        <a href="./front_page.html">How to Use</a>
+        <a href="./track_page.html">Search Track</a>
+        <a class="active" href="./album_page.html">Search Album</a>
+        <a style="float:right" href="./info_page.html">About</a>
+    </nav>
+
+    <section class="class1" style="padding: 0px; border:none" >
+        <section id="s1" style="width:100%; margin:0px; height:50%;">
+
+            <form action="#" style="padding-left:10px; text-align:start; margin:10px">
+                <label for="artist2">Enter Artist : &ensp;&ensp;&ensp;&ensp;&ensp;</label>
+                <input type="text" id="artist2" placeholder="e.g. 'pink floyd'"><br>
+                <label for="album_title">Enter Album title :&ensp;</label>
+                <input type="text" id="album_title" size="20%" placeholder="e.g. 'the dark side of the moon'">
+                <input type="button" value="Search" onclick="checkQuerythenSearch();">  
+            </form>
+
+            <div id="videoPlayer2" style="aspect-ratio:1.4; max-height:83%; margin:0% auto; width:100%; text-align:center; border:solid 1px white;">
+                <img src="./img/no_signal.gif" alt="nosignal" style="max-height:100%; max-width:100%;">
+            </div>
+        </section>
+
+        <section id="s4" style="width:100%; margin:0px; margin-top:3%; height:47.2%;">
+            <h1 class="c1">△ Current Playlist △</h1>
+            <div id="youtube_playlist"></div>
+        </section>  
+        
+    </section>
+
+    <section class="class2" id="s2">
+        <h1 id=albumInfoHeader class="c1">&nbsp;ALBUM INFO. <span>(of primary release)</span></h1>
+        <div id="album_info"></div>
+    </section>
+
+    <section class="class3" id="s3">
+        <h1 id=wikiHeader class="c1">&nbsp;WIKIPEDIA</h1>
+        <div id="wikiDiv"></div>
+    </section>
+
+    </section>
+
+    <footer>
+        copyright&copy; Jeong Harib, Republic of Korea, 2024
+    </footer>
+
+</body>
+
+</html>
